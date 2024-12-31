@@ -1,0 +1,60 @@
+
+---
+- name: Setup Debian with mail support in Docker containers and configure cron jobs
+  hosts: all
+  become: true
+  vars:
+    backup_time: "01 03 * * *"  # Run at 03:01 every day
+    users_to_backup: "{{ lookup('ansible.builtin.pipe', 'awk -F: '{ if ($3 >= 1000 && $3 < 65534) print $1 }' /etc/passwd') }}"
+  tasks:
+    - name: Pull Debian Docker image
+      docker_image:
+        name: debian
+        tag: latest
+        source: pull
+
+    - name: Run Debian container with mailutils
+      docker_container:
+        name: debian_mail_cron
+        image: debian:latest
+        state: started
+        recreate: yes
+        command: sleep infinity
+        volumes:
+          - /var/spool/mail:/var/spool/mail
+        env:
+          TZ: UTC
+
+    - name: Install mailutils and cron in the container
+      docker_container_exec:
+        container: debian_mail_cron
+        command: |
+          apt update &&
+          apt install -y mailutils cron
+
+    - name: Create cron job script for user backups
+      copy:
+        dest: /usr/local/bin/backup_home.sh
+        content: |
+          #!/bin/bash
+          for user in {{ users_to_backup }}; do
+            tar -czf /backup/${user}_$(date +%Y%m%d).tar.gz /home/${user}
+          done
+        mode: '0755'
+
+    - name: Mount backup directory to the container
+      docker_container:
+        name: debian_mail_cron
+        image: debian:latest
+        state: started
+        recreate: yes
+        volumes:
+          - /var/spool/mail:/var/spool/mail
+          - /backup:/backup
+        command: cron -f
+
+    - name: Add cron job for backups
+      lineinfile:
+        path: /etc/cron.d/backup_cron
+        line: "{{ backup_time }} root /usr/local/bin/backup_home.sh"
+        state: present

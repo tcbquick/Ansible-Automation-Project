@@ -1,0 +1,11 @@
+Initialized Git repository.
+Configured Git user details: user.name='tcbquick', user.email='tcbquick@gmail.com'.
+Added and committed README.md file.
+Created Step-010-Install-Ansible.sh.
+Created Step-020-Install-Docker-and-Registry.yml.
+Created Step-030-Add-Docker-Users.yml.
+Created Step-040-Install-Docker-on-Hosts.yml.
+Created Step-050-Setup-Docker-Swarm.yml.
+Created Step-060-Setup-Debian-Mail-and-Cron.yml.
+Created Step-070-Deploy-Nginx-Backup-Site.yml.
+Created Step-080-Create-Users-and-Groups.yml.

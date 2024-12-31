@@ -1,0 +1,58 @@
+
+---
+- name: Install Docker and configure local registry
+  hosts: localhost
+  become: true
+  vars:
+    registry_port: 5555
+  tasks:
+    - name: Install prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Add Docker's official GPG key
+      command: >
+        curl -fsSL https://download.docker.com/linux/debian/gpg |
+        gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+    - name: Set up Docker stable repository
+      copy:
+        content: |
+          deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian
+          $(lsb_release -cs) stable
+        dest: /etc/apt/sources.list.d/docker.list
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: Add user 'ansible' to the docker group
+      user:
+        name: ansible
+        groups: docker
+        append: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    - name: Create local Docker registry container
+      docker_container:
+        name: registry
+        image: registry:2
+        state: started
+        ports:
+          - "{{ registry_port }}:5000"

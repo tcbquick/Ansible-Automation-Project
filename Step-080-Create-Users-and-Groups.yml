@@ -1,0 +1,28 @@
+
+---
+- name: Create required users and groups
+  hosts: all
+  become: true
+  vars:
+    users:
+      - name: ansible
+        groups: docker
+      - name: arduino
+        groups: docker
+      - name: omada
+        groups: docker
+      - name: venus
+        groups: docker
+  tasks:
+    - name: Ensure Docker group exists
+      group:
+        name: docker
+        state: present
+
+    - name: Create users and assign groups
+      user:
+        name: "{{ item.name }}"
+        groups: "{{ item.groups }}"
+        append: yes
+        state: present
+      loop: "{{ users }}"

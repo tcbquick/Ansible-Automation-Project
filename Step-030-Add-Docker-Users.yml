@@ -1,0 +1,23 @@
+
+---
+- name: Add users to Docker group
+  hosts: localhost
+  become: true
+  vars:
+    docker_users:
+      - ansible
+      - arduino
+      - omada
+      - venus
+  tasks:
+    - name: Ensure Docker group exists
+      group:
+        name: docker
+        state: present
+
+    - name: Add users to Docker group
+      user:
+        name: "{{ item }}"
+        groups: docker
+        append: yes
+      loop: "{{ docker_users }}"

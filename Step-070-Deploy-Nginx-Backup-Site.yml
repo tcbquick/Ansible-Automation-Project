@@ -1,0 +1,49 @@
+
+---
+- name: Deploy Nginx site for backup monitoring
+  hosts: all
+  become: true
+  vars:
+    nginx_image: nginx:latest
+    backup_dir: /backup
+    web_port: 8080
+  tasks:
+    - name: Pull Nginx Docker image
+      docker_image:
+        name: "{{ nginx_image }}"
+        source: pull
+
+    - name: Create directory for web content
+      file:
+        path: /var/www/backup_site
+        state: directory
+        mode: '0755'
+
+    - name: Generate index.html with backup file list
+      copy:
+        dest: /var/www/backup_site/index.html
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Backup Files</title>
+          </head>
+          <body>
+            <h1>Backup Files</h1>
+            <ul>
+              {% for file in lookup('ansible.builtin.find', backup_dir, recurse=True, patterns="*.tar.gz").files %}
+              <li><a href="/backup/{{ file | basename }}">{{ file | basename }}</a></li>
+              {% endfor %}
+            </ul>
+          </body>
+          </html>
+
+    - name: Mount backup directory and serve through Nginx
+      docker_container:
+        name: nginx_backup_site
+        image: "{{ nginx_image }}"
+        state: started
+        ports:
+          - "{{ web_port }}:80"
+        volumes:
+          - /var/www/backup_site:/usr/share/nginx/html:ro
